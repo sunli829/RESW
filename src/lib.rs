@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate log;
-use ress::{Comment, CommentKind};
 use resast::prelude::*;
+use ress::{Comment, CommentKind};
 use std::io::{Error as IoError, Write};
 
 mod rewrite;
@@ -162,12 +162,12 @@ impl<T: Write> Writer<T> {
                 self.at_top_level = false;
                 self.write_class(class)?;
                 self.write_new_line()?;
-            },
+            }
             Decl::Function(ref func) => {
                 self.at_top_level = false;
                 self.write_function(func)?;
                 self.write_new_line()?;
-            },
+            }
             Decl::Export(ref exp) => self.write_export_decl(exp)?,
             Decl::Import(ref imp) => self.write_import_decl(imp)?,
         };
@@ -458,14 +458,13 @@ impl<T: Write> Writer<T> {
         match stmt {
             Stmt::Empty => {
                 new_line = false;
-            },
+            }
             Stmt::Debugger => self.write_debugger_stmt()?,
             Stmt::Expr(ref stmt) => {
                 let wrap = match stmt {
-                    Expr::Literal(_)
-                    | Expr::Object(_)
-                    | Expr::Function(_) 
-                    | Expr::Binary(_) => true,
+                    Expr::Literal(_) | Expr::Object(_) | Expr::Function(_) | Expr::Binary(_) => {
+                        true
+                    }
                     _ => false,
                 };
                 if wrap {
@@ -473,7 +472,7 @@ impl<T: Write> Writer<T> {
                 } else {
                     self.write_expr(stmt)?
                 }
-            },
+            }
             Stmt::Block(ref stmt) => {
                 self.at_top_level = false;
                 self.write_block_stmt(stmt)?;
@@ -1016,8 +1015,7 @@ impl<T: Write> Writer<T> {
         } else {
             match &prop.value {
                 PropertyValue::None => (),
-                PropertyValue::Expr(_)
-                | PropertyValue::Pat(_) => {
+                PropertyValue::Expr(_) | PropertyValue::Pat(_) => {
                     self.write(" = ")?;
                     self.write_property_value(&prop.value)?;
                 }
@@ -1250,7 +1248,7 @@ impl<T: Write> Writer<T> {
             Expr::Assignment(ref expr) => {
                 self.at_top_level = false;
                 self.write_assignment_expr(expr)?
-            },
+            }
             Expr::Logical(ref expr) => self.write_logical_expr(expr)?,
             Expr::Member(ref expr) => self.write_member_expr(expr)?,
             Expr::Conditional(ref expr) => self.write_conditional_expr(expr)?,
@@ -1380,17 +1378,16 @@ impl<T: Write> Writer<T> {
             self.write_unary_operator(&unary.operator)?;
         }
         match &*unary.argument {
-            Expr::Assignment(_) 
-            | Expr::Binary(_) 
+            Expr::Assignment(_)
+            | Expr::Binary(_)
             | Expr::Logical(_)
-            | Expr::Conditional(_) 
-            | Expr::ArrowFunction(_) 
+            | Expr::Conditional(_)
+            | Expr::ArrowFunction(_)
             | Expr::Function(_) => self.write_wrapped_expr(&unary.argument)?,
-            Expr::Unary(_) 
-            | Expr::Update(_) => {
+            Expr::Unary(_) | Expr::Update(_) => {
                 self.write(" ")?;
                 self.write_expr(&unary.argument)?;
-            },
+            }
             _ => self.write_expr(&unary.argument)?,
         }
         if !unary.prefix {
@@ -1465,10 +1462,11 @@ impl<T: Write> Writer<T> {
         match &*side {
             Expr::Assignment(_)
             | Expr::Conditional(_)
-            | Expr::Logical(_) 
+            | Expr::Logical(_)
             | Expr::Function(_)
-            | Expr::ArrowFunction(_) => self.write_wrapped_expr(side),
-            _ => self.write_wrapped_expr(side),
+            | Expr::ArrowFunction(_)
+            | Expr::Binary(_) => self.write_wrapped_expr(side),
+            _ => self.write_expr(side),
         }
     }
 
@@ -1510,15 +1508,14 @@ impl<T: Write> Writer<T> {
         trace!("write_assignment_expr");
         let wrap_self = match &assignment.left {
             AssignmentLeft::Expr(ref e) => match &**e {
-                Expr::Object(_) 
-                | Expr::Array(_) => true,
+                Expr::Object(_) | Expr::Array(_) => true,
                 _ => false,
-            }, 
+            },
             AssignmentLeft::Pat(ref p) => match p {
                 Pat::Array(_) => true,
                 Pat::Object(_) => true,
                 _ => false,
-            }
+            },
         };
         if wrap_self {
             self.write("(")?;
@@ -1565,8 +1562,7 @@ impl<T: Write> Writer<T> {
         trace!("write_logical_expr {:#?}", logical);
         let wrap_left = match &*logical.left {
             Expr::Logical(ref l) => l.operator == LogicalOperator::Or,
-            Expr::Assignment(_)
-            | Expr::Conditional(_) => true,
+            Expr::Assignment(_) | Expr::Conditional(_) => true,
             _ => false,
         };
         if wrap_left {
@@ -1578,8 +1574,7 @@ impl<T: Write> Writer<T> {
         self.write_logical_operator(&logical.operator)?;
         let wrap_right = match &*logical.right {
             Expr::Logical(ref _l) => true,
-            Expr::Assignment(_)
-            | Expr::Conditional(_) => true,
+            Expr::Assignment(_) | Expr::Conditional(_) => true,
             _ => false,
         };
         self.write(" ")?;
@@ -1608,14 +1603,14 @@ impl<T: Write> Writer<T> {
     pub fn write_member_expr(&mut self, member: &MemberExpr) -> Res {
         trace!("write_member_expr");
         match &*member.object {
-            Expr::Assignment(_) 
+            Expr::Assignment(_)
             | Expr::Literal(Literal::Number(_))
             | Expr::Conditional(_)
-            | Expr::Logical(_) 
+            | Expr::Logical(_)
             | Expr::Function(_)
             | Expr::ArrowFunction(_)
             | Expr::Object(_)
-            | Expr::Binary(_) 
+            | Expr::Binary(_)
             | Expr::Unary(_)
             | Expr::Update(_) => self.write_wrapped_expr(&member.object)?,
             _ => self.write_expr(&member.object)?,
@@ -1657,8 +1652,7 @@ impl<T: Write> Writer<T> {
     pub fn write_call_expr(&mut self, call: &CallExpr) -> Res {
         trace!("write_call_expr");
         match &*call.callee {
-            Expr::Function(_) 
-            | Expr::ArrowFunction(_) => self.write_wrapped_expr(&call.callee)?,
+            Expr::Function(_) | Expr::ArrowFunction(_) => self.write_wrapped_expr(&call.callee)?,
             _ => self.write_expr(&call.callee)?,
         }
         self.write_sequence_expr(&call.arguments)?;
@@ -1672,8 +1666,7 @@ impl<T: Write> Writer<T> {
         trace!("write_new_expr");
         self.write("new ")?;
         match &*new.callee {
-            Expr::Assignment(_) 
-            | Expr::Call(_) => self.write_wrapped_expr(&new.callee)?,
+            Expr::Assignment(_) | Expr::Call(_) => self.write_wrapped_expr(&new.callee)?,
             _ => self.write_expr(&new.callee)?,
         }
         self.write_sequence_expr(&new.arguments)?;
@@ -1723,13 +1716,13 @@ impl<T: Write> Writer<T> {
         if func.params.len() == 1 {
             match &func.params[0] {
                 FunctionArg::Expr(ref arg) => match arg {
-                    Expr::Ident(_)=> self.write_function_arg(&func.params[0])?,
+                    Expr::Ident(_) => self.write_function_arg(&func.params[0])?,
                     _ => self.write_function_args(&func.params)?,
                 },
                 FunctionArg::Pat(ref arg) => match arg {
                     Pat::Identifier(_) => self.write_function_arg(&func.params[0])?,
                     _ => self.write_function_args(&func.params)?,
-                }
+                },
             }
         } else {
             self.write_function_args(&func.params)?;
@@ -1737,13 +1730,10 @@ impl<T: Write> Writer<T> {
         self.write(" => ")?;
         match &func.body {
             ArrowFunctionBody::FunctionBody(ref b) => self.write_function_body(b)?,
-            ArrowFunctionBody::Expr(ref e) => {
-                match &**e {
-                    Expr::Object(_) 
-                    | Expr::Binary(_) => self.write_wrapped_expr(e)?,
-                    _ => self.write_expr(e)?,
-                }
-            }
+            ArrowFunctionBody::Expr(ref e) => match &**e {
+                Expr::Object(_) | Expr::Binary(_) => self.write_wrapped_expr(e)?,
+                _ => self.write_expr(e)?,
+            },
         }
         Ok(())
     }
@@ -1957,10 +1947,7 @@ mod test {
         let mut w = Writer::new(f.generate_child());
         w.write_variable_decls(
             &VariableKind::Var,
-            &[VariableDecl::with_value(
-                "thing",
-                Expr::boolean(false),
-            )],
+            &[VariableDecl::with_value("thing", Expr::boolean(false))],
         )
         .unwrap();
         let s = f.get_string_lossy();
