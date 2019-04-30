@@ -1468,7 +1468,7 @@ impl<T: Write> Writer<T> {
             | Expr::Logical(_) 
             | Expr::Function(_)
             | Expr::ArrowFunction(_) => self.write_wrapped_expr(side),
-            _ => self.write_expr(side),
+            _ => self.write_wrapped_expr(side),
         }
     }
 
